@@ -39,6 +39,21 @@ AI dashboard's "forecast" is a client-side model, not `/api/ai/forecast`). So th
 endpoints, now authenticated and RLS-correct for whenever they're used — zero breakage risk. A caller
 that wires them later must send `Authorization: Bearer <access token>`, as the ask-company client does.
 
+## Anti-abuse: authenticate the body-data LLM routes
+
+These routes don't query the DB (they take client-supplied data and call a **paid** LLM), so they were
+not a data-leak risk, but being callable unauthenticated is a cost/abuse vector. Added a token check
+(`authenticateAiRequest`) to the three whose caller (`callAiRoute`) already sends the Bearer token —
+**zero client change, zero breakage**:
+
+- `ceo-insights`, `fuel-prediction`, `predictive-maintenance` — ✅ now require a valid session.
+- `diagnose` — already blocked in production (dev-only GET); left as-is.
+
+Still open (need a coordinated client change — their callers send **no** token today, so adding auth
+would 401 them): `dispatch-suggestion` (trip form), `driver-performance-summary`, `customer-relationship-summary`,
+`tts`. Fix = have each caller send `Authorization: Bearer <token>` (like `callAiRoute`), then add the
+same guard. Verify with a login.
+
 ## Lower-priority follow-ups
 
 - Review the ~69 `anon`-executable SECURITY DEFINER functions (advisor WARN) and revoke `anon` from
