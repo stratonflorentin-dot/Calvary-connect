@@ -1,6 +1,10 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { requireRole } from "@/lib/server-action-auth";
+
+// Who may read/act on payroll — matches /allowances allowedRoles in route-config.
+const PAYROLL_ROLES = ["CEO", "ADMIN", "HR", "ACCOUNTANT"];
 
 /**
  * Rejects approving payroll for a period that hasn't ended yet. The period
@@ -37,9 +41,9 @@ function getAdminClient() {
  * debit when more than one is active (see
  * 115_driver_allowances_bank_account_id.sql).
  */
-export async function getActiveBankAccountsAction(currency: string = "TZS") {
+export async function getActiveBankAccountsAction(accessToken: string, currency: string = "TZS") {
   try {
-    const supabaseAdmin = getAdminClient();
+    const { admin: supabaseAdmin } = await requireRole(accessToken, PAYROLL_ROLES);
     const { data, error } = await supabaseAdmin
       .from("bank_accounts")
       .select("id, account_name, currency")
@@ -54,9 +58,9 @@ export async function getActiveBankAccountsAction(currency: string = "TZS") {
 }
 
 /** Fetches all active worker profiles including base salary information */
-export async function getWorkersAction() {
+export async function getWorkersAction(accessToken: string) {
   try {
-    const supabaseAdmin = getAdminClient();
+    const { admin: supabaseAdmin } = await requireRole(accessToken, PAYROLL_ROLES);
     const { data, error } = await supabaseAdmin
       .from("user_profiles")
       .select("id, name, email, role, status, salary, avatar_url, phone, hire_date, employee_id")
@@ -82,9 +86,9 @@ export async function savePayrollAction(payrollData: {
   period: string;
   paymentMethod: string;
   note?: string;
-}) {
+}, accessToken: string) {
   try {
-    const supabaseAdmin = getAdminClient();
+    const { admin: supabaseAdmin } = await requireRole(accessToken, PAYROLL_ROLES);
     const now = new Date().toISOString();
 
     // Fetch the profile to get their unique department-prefixed employee_id
@@ -146,9 +150,9 @@ export async function savePayrollAction(payrollData: {
 }
 
 /** Fetches full payroll and allowance history with profile joins */
-export async function getPayrollHistoryAction() {
+export async function getPayrollHistoryAction(accessToken: string) {
   try {
-    const supabaseAdmin = getAdminClient();
+    const { admin: supabaseAdmin } = await requireRole(accessToken, PAYROLL_ROLES);
     
     // We fetch from driver_allowances and join with user_profiles
     const { data, error } = await supabaseAdmin
@@ -178,9 +182,10 @@ export async function getPayrollHistoryAction() {
 }
 
 /** Approves a payroll record and creates a corresponding expense/invoice */
-export async function approvePayrollRecordAction(id: string, approvedByUserId: string) {
+export async function approvePayrollRecordAction(id: string, accessToken: string) {
   try {
-    const supabaseAdmin = getAdminClient();
+    // Approver is the verified session user, not a client-supplied id.
+    const { admin: supabaseAdmin, user: approver } = await requireRole(accessToken, PAYROLL_ROLES);
     const now = new Date().toISOString();
 
     // 1. Fetch the payroll record from driver_allowances, joining the user profile
@@ -320,7 +325,7 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
         category: isBasePayroll ? "Driver Salaries" : "Driver Allowances",
         account_code: isBasePayroll ? "5102" : "5008",
         status: "approved",
-        approved_by: approvedByUserId,
+        approved_by: approver.id,
         created_at: now
       })
       .select()
@@ -383,9 +388,9 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
  * `PAY-{id}` number approvePayrollRecordAction always uses, so no new
  * column/schema change is needed to relate them.
  */
-export async function markPayrollPaidAction(id: string, bankAccountId?: string) {
+export async function markPayrollPaidAction(id: string, accessToken: string, bankAccountId?: string) {
   try {
-    const supabaseAdmin = getAdminClient();
+    const { admin: supabaseAdmin } = await requireRole(accessToken, PAYROLL_ROLES);
     const now = new Date().toISOString();
 
     const { data: record, error: fetchErr } = await supabaseAdmin
@@ -559,9 +564,9 @@ export async function markPayrollPaidAction(id: string, bankAccountId?: string) 
 }
 
 /** Rejects/Deletes a payroll or allowance record */
-export async function rejectPayrollRecordAction(id: string) {
+export async function rejectPayrollRecordAction(id: string, accessToken: string) {
   try {
-    const supabaseAdmin = getAdminClient();
+    const { admin: supabaseAdmin } = await requireRole(accessToken, PAYROLL_ROLES);
     const now = new Date().toISOString();
 
     // Update status to rejected
@@ -580,9 +585,9 @@ export async function rejectPayrollRecordAction(id: string) {
 }
 
 /** Deletes a payroll record from database history completely */
-export async function deletePayrollRecordAction(id: string) {
+export async function deletePayrollRecordAction(id: string, accessToken: string) {
   try {
-    const supabaseAdmin = getAdminClient();
+    const { admin: supabaseAdmin } = await requireRole(accessToken, PAYROLL_ROLES);
 
     const { error: errD } = await supabaseAdmin
       .from("driver_allowances")

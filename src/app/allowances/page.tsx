@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +84,8 @@ interface PayrollRecord {
 export default function AllowancesPage() {
   const { user } = useSupabase();
   const { role } = useRole();
+  // Access token for the authorized payroll server actions (they verify it + role).
+  const getToken = async () => (await supabase.auth.getSession()).data.session?.access_token ?? '';
   const { format } = useCurrency();
 
   // State management
@@ -126,7 +129,7 @@ export default function AllowancesPage() {
     setLoading(true);
     try {
       // 1. Fetch Workers
-      const workersRes = await getWorkersAction();
+      const workersRes = await getWorkersAction(await getToken());
       if (workersRes.success && workersRes.workers) {
         // Initialize inputs with default values
         const initialSalaries: Record<string, number> = {};
@@ -181,7 +184,7 @@ export default function AllowancesPage() {
   };
 
   const loadHistory = async () => {
-    const historyRes = await getPayrollHistoryAction();
+    const historyRes = await getPayrollHistoryAction(await getToken());
     if (historyRes.success && historyRes.history) {
       setHistory(historyRes.history as PayrollRecord[]);
     }
@@ -217,6 +220,7 @@ export default function AllowancesPage() {
       }
 
       // 2. Save payroll record
+      const token = await getToken();
       const res = await savePayrollAction({
         employeeId: workerId,
         employeeName: worker.name,
@@ -228,7 +232,7 @@ export default function AllowancesPage() {
         period,
         paymentMethod: method,
         note
-      });
+      }, token);
 
       if (res.success) {
         toast({ title: "Payroll Submitted", description: `Manual payroll for ${worker.name} submitted successfully!` });
@@ -254,7 +258,7 @@ export default function AllowancesPage() {
     if (!user) return;
     setActionLoading(id);
     try {
-      const res = await approvePayrollRecordAction(id, user.id);
+      const res = await approvePayrollRecordAction(id, await getToken());
       if (res.success) {
         const deduction = (res as any).loanDeductionAmount as number | undefined;
         toast({
@@ -285,7 +289,7 @@ export default function AllowancesPage() {
     setMarkPaidAccountId('');
     setMarkPaidAccountsLoading(true);
     try {
-      const res = await getActiveBankAccountsAction('TZS');
+      const res = await getActiveBankAccountsAction(await getToken(), 'TZS');
       setMarkPaidAccounts(res.accounts || []);
       if ((res.accounts || []).length === 1) setMarkPaidAccountId(res.accounts[0].id);
       if (!res.success) {
@@ -301,7 +305,7 @@ export default function AllowancesPage() {
     const id = markPaidTarget.id;
     setActionLoading(id);
     try {
-      const res = await markPayrollPaidAction(id, markPaidAccountId || undefined);
+      const res = await markPayrollPaidAction(id, await getToken(), markPaidAccountId || undefined);
       if (res.success) {
         toast({ title: "Payroll Paid", description: "Marked as disbursed — linked invoice and expense updated." });
         setMarkPaidTarget(null);
@@ -320,7 +324,7 @@ export default function AllowancesPage() {
   const handleRejectPayroll = async (id: string) => {
     setActionLoading(id);
     try {
-      const res = await rejectPayrollRecordAction(id);
+      const res = await rejectPayrollRecordAction(id, await getToken());
       if (res.success) {
         toast({ title: "Record Rejected", description: "Payroll entry rejected successfully." });
         await loadHistory();
@@ -339,7 +343,7 @@ export default function AllowancesPage() {
     if (!confirm("Are you sure you want to permanently delete this payroll record?")) return;
     setActionLoading(id);
     try {
-      const res = await deletePayrollRecordAction(id);
+      const res = await deletePayrollRecordAction(id, await getToken());
       if (res.success) {
         toast({ title: "Record Deleted", description: "Record removed permanently from ledger history." });
         await loadHistory();

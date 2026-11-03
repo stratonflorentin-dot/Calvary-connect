@@ -32,9 +32,13 @@ These take **no `accessToken`** and do **no role check** before mutating via the
   `deleteTripAction`, `saveInvoiceAction`, `deleteInvoiceAction`, `saveExpenseAction`,
   `deleteExpenseAction`, `saveRateSheetAction`, … — create/delete customers, trips, invoices and
   expenses with no authorization.
-- **allowances/actions.ts** — `savePayrollAction`, `approvePayrollRecordAction` (approver is a
-  client-supplied `approvedByUserId`, unverified), `markPayrollPaidAction`, `rejectPayrollRecordAction`,
-  `deletePayrollRecordAction` — **payroll** save/approve/pay/delete with no authorization. Highest risk.
+- **allowances/actions.ts** — ✅ **FIXED.** All eight payroll actions now call
+  `requireRole(accessToken, ['CEO','ADMIN','HR','ACCOUNTANT'])` (shared guard in
+  [server-action-auth.ts](src/lib/server-action-auth.ts)) before any service-role operation;
+  `approvePayrollRecordAction` records the **verified** session user as approver (the spoofable
+  `approvedByUserId` arg is gone); the single caller (allowances page) passes the session token.
+  Verify with a login that save/approve/mark-paid/reject/delete still work and that a non-payroll role
+  is refused.
 - **fleet/fuel-anomalies/actions.ts** — `lockFuelCardAction(fuelLogId, actorId, reason)` — `actorId`
   is a spoofable plain arg; no token.
 - **admin/hr/driver-compliance/actions.ts** — `runDriverReminderScan()` — no auth (sends reminders;
