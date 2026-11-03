@@ -186,7 +186,8 @@ export default function FuelAnomaliesPage() {
     const reason = window.prompt("Reason for locking this fuel card?") ?? "";
     setLockingCard(fuelLogId);
     try {
-      const result = await lockFuelCardAction(fuelLogId, user.id, reason);
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? "";
+      const result = await lockFuelCardAction(fuelLogId, token, reason);
       if (!result.success) throw new Error(result.error || "Failed to lock card");
       toast({ variant: "success", title: result.alreadyLocked ? "Card already locked" : `Fuel card ${result.cardNumber ?? ""} locked` });
     } catch (err: any) {

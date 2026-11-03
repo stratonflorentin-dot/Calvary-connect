@@ -1,15 +1,6 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
-
-function getAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error("Missing Supabase admin credentials");
-  }
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
+import { requireRole } from "@/lib/server-action-auth";
 
 /**
  * Deactivates the fuel card linked to a flagged transaction. A separate,
@@ -20,9 +11,12 @@ function getAdminClient() {
  * like card suspension need their own authorized human step, not to happen
  * quietly alongside "start investigation".
  */
-export async function lockFuelCardAction(fuelLogId: string, actorId: string, reason: string) {
+export async function lockFuelCardAction(fuelLogId: string, accessToken: string, reason: string) {
   try {
-    const admin = getAdminClient();
+    // Card suspension is a CEO/ADMIN-only action — enforce it here (the UI
+    // gate is not a security boundary), and record the verified session user.
+    const { admin, user } = await requireRole(accessToken, ["CEO", "ADMIN"]);
+    const actorId = user.id;
 
     const { data: fuelLog, error: fuelLogErr } = await admin
       .from("fuel_logs")

@@ -40,8 +40,9 @@ These take **no `accessToken`** and do **no role check** before mutating via the
   `approvedByUserId` arg is gone); the single caller (allowances page) passes the session token.
   Verify with a login that save/approve/mark-paid/reject/delete still work and that a non-payroll role
   is refused.
-- **fleet/fuel-anomalies/actions.ts** — `lockFuelCardAction(fuelLogId, actorId, reason)` — `actorId`
-  is a spoofable plain arg; no token.
+- **fleet/fuel-anomalies/actions.ts** — ✅ **FIXED.** `lockFuelCardAction` now requires a CEO/ADMIN
+  session (`requireRole`) and records the verified user as the audit actor; the spoofable `actorId`
+  arg is replaced by the access token, and the caller (fuel-anomalies page) passes it.
 - **admin/hr/driver-compliance/actions.ts** — `runDriverReminderScan()` — no auth (sends reminders;
   lower risk / likely cron).
 
