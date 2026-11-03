@@ -96,7 +96,7 @@ export default function Home() {
         isCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
         {/* Sticky top header */}
-        <header className="sticky top-0 h-14 md:h-16 bg-card/90 backdrop-blur-md border-b border-border flex items-center justify-between px-4 md:px-6 z-40 mb-4 md:mb-6 -mx-4 md:-mx-8">
+        <header className="sticky top-0 h-14 md:h-16 bg-card/70 backdrop-blur-xl backdrop-saturate-150 border-b border-border/70 flex items-center justify-between px-4 md:px-6 z-40 mb-4 md:mb-6 -mx-4 md:-mx-8">
           <div className="md:hidden font-headline tracking-tighter text-primary text-lg font-bold">Calvary Connect</div>
           <div className="hidden md:block" />
           <div className="flex items-center gap-1.5 md:gap-2 shrink-0">

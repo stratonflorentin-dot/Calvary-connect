@@ -183,12 +183,12 @@ export function AuthComponent() {
       </div>
 
       {/* Right: sign-in form */}
-      <div className="flex-1 flex flex-col justify-center items-center p-8 md:p-14 bg-background">
+      <div className="flex-1 flex flex-col justify-center items-center p-8 md:p-14 bg-gradient-to-br from-background via-primary/5 to-background">
         <div className="absolute top-4 right-4 md:static md:self-end md:mb-8">
           <ThemeToggle />
         </div>
 
-        <div className="w-full max-w-sm space-y-6">
+        <div className="w-full max-w-sm cv-glass p-8 space-y-6">
           <div className="space-y-1">
             <h2 className="font-headline text-2xl font-bold text-foreground">Sign in</h2>
             <p className="text-sm text-muted-foreground">

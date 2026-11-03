@@ -191,6 +191,23 @@
     transition: border-color 180ms ease, box-shadow 180ms ease;
   }
 
+  /* Liquid-glass material — a translucent, blurred surface with a bright top
+     edge (light catching the material) and a soft depth shadow. Built on the
+     theme's own --card/--border tokens so it works in light and dark. Apply to
+     floating chrome (header, sidebar) and hero cards; never stack one cv-glass
+     on another (legibility collapses). Accessibility fallbacks below turn it
+     solid for reduced-transparency / high-contrast / unsupported browsers. */
+  .cv-glass {
+    @apply rounded-2xl;
+    background: hsl(var(--card) / 0.62);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+    border: 1px solid hsl(var(--border) / 0.55);
+    box-shadow:
+      0 10px 34px -10px hsl(222 47% 8% / 0.22),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.30);
+  }
+
   .cv-header {
     @apply flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1;
   }
@@ -424,6 +441,27 @@ select {
   input, textarea, select { font-size: 16px; }
   .ios-safe-top { padding-top: env(safe-area-inset-top); }
   .ios-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Liquid-glass legibility fallbacks — make the material solid when the viewer
+   asked for less transparency / more contrast, or the browser can't blur. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .cv-glass { background: hsl(var(--card) / 0.96); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cv-glass {
+    background: hsl(var(--card));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  .cv-glass {
+    background: hsl(var(--card));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: hsl(var(--border));
+  }
 }
 
 /* ── Mobile app chrome spacing ─────────────────────────────────────────────
