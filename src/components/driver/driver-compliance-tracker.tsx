@@ -283,7 +283,8 @@ export function DriverComplianceDashboard() {
   const runReminders = async () => {
     setScanning(true);
     try {
-      const result = await runDriverReminderScan();
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? "";
+      const result = await runDriverReminderScan(token);
       toast({ variant: "success", title: "Reminders sent", description: `${result.sent} notification(s) created.` });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });

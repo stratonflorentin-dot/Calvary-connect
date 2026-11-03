@@ -1,17 +1,10 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
 import { DRIVER_DOCUMENT_TYPES } from "@/lib/compliance/driver-documents";
 import { daysRemaining, REMINDER_THRESHOLDS } from "@/lib/compliance/status";
+import { requireRole } from "@/lib/server-action-auth";
 
 const MANAGER_ROLES = ["CEO", "ADMIN", "OPERATOR", "HR"];
-
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  if (!url || !key) throw new Error("Missing Supabase credentials");
-  return createClient(url, key);
-}
 
 /**
  * On-demand reminder scan for driver document expiry — mirrors
@@ -19,8 +12,10 @@ function getAdminClient() {
  * threshold/dedup logic, same "compliance" notification category so both
  * features actually show up in the Notifications Center).
  */
-export async function runDriverReminderScan(): Promise<{ sent: number }> {
-  const admin = getAdminClient();
+export async function runDriverReminderScan(accessToken: string): Promise<{ sent: number }> {
+  // Triggers a notification blast + reads driver data via the service-role
+  // client, so require a manager session.
+  const { admin } = await requireRole(accessToken, MANAGER_ROLES);
 
   const { data: drivers } = await admin
     .from("user_profiles")

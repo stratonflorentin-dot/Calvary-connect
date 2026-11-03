@@ -24,9 +24,10 @@ same-origin POST, so they're not trivially callable by an anonymous internet cli
   `requireManageRole`.
 - **tracking/actions.ts** — `upsertDriverLocationAction` requires a token via `resolveAuthUser`.
 
-## Unguarded (broken access control) ❌ — fix needed
+## Was unguarded (broken access control) — ✅ now all resolved
 
-These take **no `accessToken`** and do **no role check** before mutating via the service-role client:
+These took **no `accessToken`** and did **no role check** before mutating via the service-role client.
+All are now fixed (guarded with `requireRole`, or deleted where dead):
 
 - **sales/actions.ts** — ✅ **FIXED (deleted).** All 11 exports (customer/trip/invoice/expense/
   rate-sheet/quotation create+delete) used the service-role client with no auth — but a codebase scan
@@ -43,8 +44,8 @@ These take **no `accessToken`** and do **no role check** before mutating via the
 - **fleet/fuel-anomalies/actions.ts** — ✅ **FIXED.** `lockFuelCardAction` now requires a CEO/ADMIN
   session (`requireRole`) and records the verified user as the audit actor; the spoofable `actorId`
   arg is replaced by the access token, and the caller (fuel-anomalies page) passes it.
-- **admin/hr/driver-compliance/actions.ts** — `runDriverReminderScan()` — no auth (sends reminders;
-  lower risk / likely cron).
+- **admin/hr/driver-compliance/actions.ts** — ✅ **FIXED.** `runDriverReminderScan` now requires a
+  manager session (CEO/ADMIN/OPERATOR/HR) before the notification blast; caller passes the token.
 
 ## Fix pattern (scoped follow-up — needs login testing)
 
