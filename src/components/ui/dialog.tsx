@@ -90,7 +90,7 @@ const DialogContent = React.forwardRef<
             <DialogPrimitive.Content ref={ref} forceMount asChild {...props}>
               <motion.div
                 className={cn(
-                  "pointer-events-auto relative grid w-full max-w-lg gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-lg max-h-[90vh] overflow-y-auto",
+                  "cv-glass pointer-events-auto relative grid w-full max-w-lg gap-4 p-4 sm:p-6 max-h-[90vh] overflow-y-auto",
                   className
                 )}
                 variants={modalContent}
