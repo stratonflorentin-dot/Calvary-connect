@@ -28,10 +28,11 @@ same-origin POST, so they're not trivially callable by an anonymous internet cli
 
 These take **no `accessToken`** and do **no role check** before mutating via the service-role client:
 
-- **sales/actions.ts** — `saveCustomerAction`, `deleteCustomerAction`, `saveTripAction`,
-  `deleteTripAction`, `saveInvoiceAction`, `deleteInvoiceAction`, `saveExpenseAction`,
-  `deleteExpenseAction`, `saveRateSheetAction`, … — create/delete customers, trips, invoices and
-  expenses with no authorization.
+- **sales/actions.ts** — ✅ **FIXED (deleted).** All 11 exports (customer/trip/invoice/expense/
+  rate-sheet/quotation create+delete) used the service-role client with no auth — but a codebase scan
+  found **zero callers and zero imports** of the file (the live sales/finance pages write through other
+  paths). Rather than guard dead code, the file was removed, eliminating the latent broken-access-control
+  surface entirely.
 - **allowances/actions.ts** — ✅ **FIXED.** All eight payroll actions now call
   `requireRole(accessToken, ['CEO','ADMIN','HR','ACCOUNTANT'])` (shared guard in
   [server-action-auth.ts](src/lib/server-action-auth.ts)) before any service-role operation;
