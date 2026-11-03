@@ -208,6 +208,14 @@
       inset 0 1px 0 0 hsl(0 0% 100% / 0.30);
   }
 
+  /* Glass chrome for the sidebar — translucent over the sidebar's own token so
+     content scrolls faintly behind it. Fallbacks below keep it solid. */
+  .cv-glass-sidebar {
+    background: hsl(var(--sidebar-background) / 0.80);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    backdrop-filter: blur(20px) saturate(150%);
+  }
+
   .cv-header {
     @apply flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1;
   }
@@ -234,6 +242,8 @@
 
   .cv-command-header {
     @apply relative overflow-hidden rounded-xl border border-sidebar-border bg-gradient-to-br from-sidebar via-sidebar to-sidebar-accent text-sidebar-foreground;
+    /* Glass top edge — light catching the slab, matching the cv-glass language. */
+    box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.12), 0 10px 30px -12px hsl(222 47% 8% / 0.35);
   }
 
   .cv-command-header::after {
@@ -447,10 +457,16 @@ select {
    asked for less transparency / more contrast, or the browser can't blur. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .cv-glass { background: hsl(var(--card) / 0.96); }
+  .cv-glass-sidebar { background: hsl(var(--sidebar-background)); }
 }
 @media (prefers-reduced-transparency: reduce) {
   .cv-glass {
     background: hsl(var(--card));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .cv-glass-sidebar {
+    background: hsl(var(--sidebar-background));
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -461,6 +477,11 @@ select {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     border-color: hsl(var(--border));
+  }
+  .cv-glass-sidebar {
+    background: hsl(var(--sidebar-background));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 
