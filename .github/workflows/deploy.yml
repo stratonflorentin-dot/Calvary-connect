@@ -112,6 +112,12 @@ jobs:
 
       - name: Build Next.js app
         run: npm run build
+        # These NEXT_PUBLIC_* values are client-side config that ships in the
+        # browser bundle — they are NOT secrets. To remove them from the "secrets
+        # in PR build" finding entirely, define them as GitHub Actions *variables*
+        # (repo Settings → Secrets and variables → Actions → Variables) and switch
+        # the four lines below from `secrets.` to `vars.`. Left as secrets here so
+        # the build keeps working until those variables are created.
         env:
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
@@ -153,7 +159,14 @@ jobs:
     name: Deploy Staging
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request'
+    # Preview deploys use FIREBASE_SERVICE_ACCOUNT (a real secret). Restrict this
+    # job to pull requests that originate from a branch in THIS repository — a PR
+    # from a fork is untrusted and must never reach a job that can read secrets.
+    # (GitHub already withholds secrets from fork-triggered `pull_request` runs;
+    # this makes the boundary explicit and fails closed.)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     environment:
       name: staging
       url: ${{ steps.deploy.outputs.url }}
