@@ -1,73 +1,70 @@
 # Scan #2 remediation report
 
-**Scope:** Deep profile, gate = block. Baseline reported **30.1 / 100**, 2207 findings
-across 125 groups (11 critical + 35 high + the rest medium/low). Target ≥ 97.
+**Scope:** Deep profile, gate = block. Baseline **30.1 / 100**, 2207 findings.
+Target ≥ 97. This report reflects the **full scanner output** (the detailed finding
+list), which corrected several earlier assumptions.
 
-## Bottom line (read this first)
+## Bottom line
 
-- **I cannot report a fresh score.** The scanner is not available in this environment,
-  so I have not rerun the profile and will not claim any number. Everything below is what
-  I verified by reading the code, plus the tests I could actually run.
-- **I do not believe 97 is safely reachable by me under the stated rules.** The reason is
-  structural, not effort: ~85% of the findings (1094 `unsafe-any-type` + 509
-  `supabase-query-auth-review` + 270 `missing-error-boundary` ≈ 1873 of 2207) are
-  high-volume *medium* categories that are either (a) static-pattern matches on code that
-  is already defended, or (b) only "resolvable" by mass mechanical edits that cannot be
-  made behavior-preserving or verified without the scanner. Clearing them to hit 97 would
-  require exactly the moves the task forbids — suppressing rules, excluding files, or
-  blanket edits I can't prove safe. I chose correctness over the number.
+- **I cannot report a fresh score** — the scanner (the local app at `127.0.0.1:5173`)
+  is not runnable from here, and there is no scan script in `package.json`. I will not
+  claim a number I did not measure.
+- **97 is not safely reachable by me.** The score is dominated by four high-volume
+  categories — **1094** `unsafe-any-type` + **509** `supabase-query-auth-review` +
+  **270** `missing-error-boundary` + **190** `console-log-in-production` = **2063 of
+  2207 findings (~94%)**. Clearing those needs mass mechanical edits across ~2000 sites
+  that cannot be made behavior-preserving *or* verified without the scanner — exactly
+  what the task forbids (no rule-suppression, no file-exclusion, smallest safe changes).
+  I fixed the real, verifiable issues instead.
 
-## What was verified and fixed (committed)
+## Fixed and committed (verifiable in the working tree)
 
-| Severity | Finding | Verdict | Action |
-|---|---|---|---|
-| Critical | `database:client-role-update` — client writes own `user_profiles.role` | **Real** (dead code; 0 callers) | Removed `updateRole()` from `supabase-provider.tsx`. DB trigger (migration 033) already blocks self role change. |
-| Critical | `security:jwt-token` — hardcoded **service_role** key in 3 scripts | **Real leak** | `scripts/{inspect_rpc,test_rpc_sql,get_openapi}.js` now read `SUPABASE_SERVICE_ROLE_KEY` from env with a guard. **The key is still in git history → it MUST be rotated in Supabase.** |
-| Critical | `database:table-without-rls` | **Real** (10 tables) | Migration `149_enable_rls_missing_tables.sql` enables RLS + authenticated-only policies on `client_balances, contract_lines, document_sequences, fiscal_periods, follow_ups, payments, route_profitability, trip_accounting, vendor_balances`, and makes `rate_sheet_edits` an append-only audit log. **Apply in the Supabase SQL editor — CLI/MCP not connected here.** |
-| High | `security:dangerous-html` / innerHTML XSS | **Already mitigated** | `contract-generator`, `sales/page`, `transport-agreement` route through `sanitizeHtml()`; `fleet-map-3d-canvas` uses `escapeAttr()` + a whitelist `vehicleSvg()`. Scanner flags the raw API token regardless. No change needed. |
-| High | `unvalidated-file-upload` — `storage/actions.ts` | **Partly real** | Already had auth + bucket allowlist + path-traversal guard + size cap. Added a block on browser-executable uploads (html/xhtml/svg/xml/js) by content-type **and** extension → closes the stored-XSS path. |
-| High | committed `.env.test.example` | **False positive** | File contains only empty placeholders + setup comments, no secrets. Left as-is. |
-| High | password-in-code (`tests/integration/helpers.ts`) | **Benign test fixture** | Replaced the literal with a per-user generated strong password (unique per run, carried on `TestUser`). No weakening. |
-| High | `body-parser` CVE (CVE-2024-45590) | **False positive** | Installed versions are 2.3.0 (top-level) and 1.20.8 (nested under genkit) — both above the 1.20.3 fix. Not vulnerable. |
-| — | missing `global-error.tsx` | **Real gap** | Added the App Router root error boundary (generic message, no error leak, keeps digest). |
+| Sev | Finding | Action |
+|---|---|---|
+| Critical | `client-role-update` | Removed dead `updateRole()` from `supabase-provider.tsx`. |
+| Critical | `jwt-token` (6 files) | **5 of 6 fixed:** 3 scripts + `check_headers.js` now read keys from env; doc placeholder redacted. **Remaining: `vercel.json` anon key** — public by design (ships to browsers), but move it to a Vercel env var to clear the finding (I left it to avoid breaking your deploy). |
+| High | `password-in-code` | Test fixture now generates a per-run password; literal removed. |
+| High | `committed-env-file` | `.env.test.example` untracked (only empty placeholders); setup preserved in `docs/local-test-env.md`. |
+| High | `unvalidated-file-upload` | `storage/actions.ts`: added executable-type block (html/svg/xml/js) by MIME + extension. The 2nd hit, `statement-pdf.ts`, is a PDF **generator** (jsPDF) — **false positive**, nothing to validate. |
+| High | `ssrf-risk` | `ewura-caps/route.ts`: constrained the scraped-link fetch to the `ewura.go.tz` host. |
+| High | `dangerous-runtime-code` (9) | Verified **already mitigated** — `sanitizeHtml()` (contract/sales/transport previews) and `escapeAttr()` + whitelist `vehicleSvg()` (fleet-map). Scanner flags the raw `innerHTML`/`dangerouslySetInnerHTML` API regardless. |
+| — | missing `global-error.tsx` | Added the App Router root error boundary. |
+| Medium | `pdpc-registration-not-documented` | Added `docs/compliance/pdpc-registration.md` recording the registration obligation (no fabricated certificate). |
 
-Secondary: `fx_rates` from the brief does not exist; the FX table is `exchange_rates`, which
-already has RLS.
+## Written — needs you to APPLY in Supabase, then rescan
 
-## The overly-permissive RLS findings (`USING (true)`)
+Migration `supabase/migrations/149_enable_rls_missing_tables.sql` (surgical; only the
+3 scanner-flagged tables, so it cannot OR-loosen existing policies):
 
-203 `USING(true)` / `WITH CHECK(true)` lines across ~40 SQL files. **The live database is
-already locked down** by the repo's existing passes — migrations `034`, `040`, `048`, `053`,
-`067` `DROP` the open policies and replace them with role-scoped ones (`current_user_role() IN (...)`).
-The remaining 203 lines are **historical migration statements that are superseded at runtime**.
-A static scanner counts every historical line; it cannot see that a later migration dropped it.
-Removing them would mean rewriting migration history (breaks `supabase db reset` reproducibility
-and the audit trail) or changing scanner config — both disallowed. So these are left intact and
-flagged here as superseded, not open.
+- Critical `table-without-rls`: **vendor_balances**, **fx_rates** → RLS + `TO authenticated` role-scoped policies.
+- Critical `policy-without-rls-enabled`: **rate_sheet_edits** → RLS enabled; its open `USING(true)` insert policy replaced with a scoped append-only pair.
 
-## What I deliberately did NOT do (and why)
+I **cannot apply migrations** (no DB/CLI/MCP connection here). These findings will not
+clear on a rescan until you run 149 in the Supabase SQL editor.
 
-- **1094 `unsafe-any-type`** — mass `any` replacement is not behavior-preserving (narrowing
-  changes runtime behavior) and is unverifiable without the scanner. High regression risk for a
-  number I can't confirm.
-- **509 `supabase-query-auth-review`** — most are server components/actions already behind RLS +
-  `requireRole`. "Fixing" them means scattering redundant assertions; noise, not security.
-- **270 `missing-error-boundary`** — added the one genuinely-missing root boundary
-  (`global-error.tsx`); did not add ~150 segment `error.tsx` files purely to move a count.
+## Real, but needs the scanner's exact locations or a DB/CI I won't touch blind
 
-## Verification I *could* run
+- **`pre-ticked-consent-checkbox` (critical)** and **`sms-opt-out-missing` / `rfc8058-list-unsubscribe` (high/med)** — I could not locate these by code pattern in `src/`. Guess-editing consent/SMS/email code risks real bugs. **Please export the scanner's "affected locations" for these** and I'll fix them exactly.
+- **`rls-policy-overly-permissive` (~17 left)** and **`rls-policy-missing-role-restriction` (~80)** — real, and now precisely named by the scan. Fixing means `DROP`+`CREATE` each policy with its exact predicate + a `TO authenticated` clause, then applying and testing against the DB. Reconstructing ~100 live policies blind (no DB to test) risks breaking production access. Best done with a DB connection in the loop; I can generate the migration if you can apply+verify it.
+- **`ci-secret-in-pr-workflow` (9)** — `deploy.yml` runs secret-using jobs on `pull_request`. Real, but the fix changes your live deploy/preview pipeline; I'd rather propose the exact diff than risk breaking it.
+- **Dependency CVEs** — `body-parser@1.20.8`, `uuid@10.0.0`, `@opentelemetry/core`, `@hono/node-server` are flagged by **2026 OSV advisories** (newer than my knowledge). All are **transitive** (under genkit/opentelemetry). Fixing needs `overrides` pinned to verified-patched versions + `npm install` + a full build to confirm nothing breaks — a focused task where the build can be exercised.
 
-- `tsc --noEmit` — **passes** (0 errors).
+## Not safely fixable at scale (these gate the score)
+
+`unsafe-any-type` (1094), `supabase-query-auth-review` (509), `missing-error-boundary`
+(270), `console-log-in-production` (190), `large-unoptimized-image` (3). Mass edits here
+are high-regression-risk and unverifiable without the scanner.
+
+## Verification I could run
+
+- `tsc --noEmit` — **passes**.
 - `vitest run --config vitest.unit.config.ts` — **23 passed / 0 failed**.
-- Integration tests (`tests/integration/*`) require a live local Supabase stack and were not run here.
 
-## Remaining work to actually reach a high score (needs the scanner + a DB connection)
+## Your action items
 
-1. **Rotate the Supabase service_role key** (history exposure) — only the user can do this.
-2. **Apply migration 149** in Supabase, then rerun the scan to confirm the `table-without-rls`
-   criticals clear.
-3. Rerun the scanner to see which categories remain and their real weighting, then decide, with
-   the scanner in the loop, whether the medium-volume categories are false positives to be
-   acknowledged in policy or genuine debt to pay down incrementally with tests.
-4. If `any`-reduction is pursued, do it module-by-module behind the type-checker and tests, not
-   as a bulk edit.
+1. **Rotate the Supabase service_role key** (still in git history).
+2. **Apply migration 149** in Supabase, then rerun the scan.
+3. **Export the scanner's affected-locations** for the consent-checkbox, SMS, and
+   List-Unsubscribe findings so I can fix them precisely.
+4. Decide whether to proceed on the ~100 RLS policy role-clauses (needs DB to verify)
+   and the CI/dependency changes (I'll produce exact diffs on request).
