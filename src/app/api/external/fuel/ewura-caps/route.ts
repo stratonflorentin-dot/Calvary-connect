@@ -39,6 +39,13 @@ export const GET = withAuthAndRateLimit(async (_request: NextRequest) => {
       .map((match) => ({ url: new URL(match[1].replaceAll("&amp;", "&"), EWURA_PAGE).toString(), title: htmlText(match[2]) }))
       .filter((link) => /cap prices.*petroleum products/i.test(link.title));
     if (!links.length) throw new Error("EWURA's current cap-price PDF was not found on its official pricing page.");
+    // SSRF guard: the PDF link is scraped from EWURA's HTML, so constrain the
+    // outbound fetch to EWURA's own host — a tampered/injected <a href> can't
+    // redirect this server request to an internal or arbitrary endpoint.
+    const pdfHost = new URL(links[0].url).hostname.toLowerCase();
+    if (pdfHost !== "www.ewura.go.tz" && pdfHost !== "ewura.go.tz" && !pdfHost.endsWith(".ewura.go.tz")) {
+      throw new Error("EWURA cap-price link pointed outside the official EWURA domain; refusing to fetch.");
+    }
     const documentResponse = await fetch(links[0].url, { signal: AbortSignal.timeout(30_000), headers: { "user-agent": "CalvaryConnect/1.0 fuel-price reference" } });
     if (!documentResponse.ok) throw new Error(`EWURA cap-price PDF returned HTTP ${documentResponse.status}`);
     const bytes = new Uint8Array(await documentResponse.arrayBuffer());
