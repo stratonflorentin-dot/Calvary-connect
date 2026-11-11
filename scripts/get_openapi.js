@@ -1,7 +1,12 @@
 const http = require('https');
 
 const url = 'https://qaqonhjeqtlatqsrqcnx.supabase.co/rest/v1/';
-const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhcW9uaGplcXRsYXRxc3JxY254Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDA5NDEwMCwiZXhwIjoyMDg5NjcwMTAwfQ.msCOdHgRxIw7EGVQ_PVVqmhB7Q99NboJPe-f3AdqNEs';
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!key) {
+  console.error('Set SUPABASE_SERVICE_ROLE_KEY in the environment before running this script.');
+  process.exit(1);
+}
 
 const options = {
   headers: {

@@ -28,7 +28,6 @@ interface SupabaseContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateRole: (role: UserRole) => Promise<void>;
   changeRole: (role: UserRole) => void;
   refreshUser: () => Promise<void>;
   updateProfile: (updates: Partial<{ name: string; avatar: string; phone: string }>) => Promise<void>;
@@ -426,22 +425,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateRole = async (newRole: UserRole) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ role: newRole })
-      .eq('id', user.id);
-
-    if (error) {
-      console.error('[SupabaseProvider] Error updating role:', error);
-      return;
-    }
-
-    setUser(prev => prev ? { ...prev, role: newRole } : null);
-    setRole(newRole);
-  };
+  // NOTE: a client-side self-service role update was removed here — letting a
+  // user write their own user_profiles.role is a privilege-escalation vector.
+  // Role changes go through the server-verified admin path (users/actions.ts),
+  // and user_profiles RLS (migration 033) forbids self role changes regardless.
 
   const updateProfile = async (updates: Partial<{ name: string; avatar: string; phone: string }>) => {
     if (!user) return;
@@ -521,7 +508,6 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
-      updateRole,
       changeRole,
       refreshUser,
       updateProfile,
