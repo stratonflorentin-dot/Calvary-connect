@@ -199,10 +199,10 @@ This is the combined master config. Create a file named `.env` in the root direc
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 
 # Client-safe anonymous API key. Restricted by database Row-Level Security (RLS).
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_supabase_anon_key_placeholder
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>   # copy from Supabase dashboard → Settings → API
 
 # Secret backend key. Bypasses all RLS policies. NEVER expose to the frontend.
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_supabase_service_role_key_placeholder
+SUPABASE_SERVICE_ROLE_KEY=<your-supabase-service-role-key>   # copy from Supabase dashboard → Settings → API
 
 # ------------------------------------------------------------------------------
 # 2. Maps & Logistical Route Processing
