@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { UserRole } from '@/types/roles';
 
@@ -37,7 +38,9 @@ export interface TestUser {
 export async function createTestUser(role: UserRole, overrides: Record<string, any> = {}): Promise<TestUser> {
   const svc = getServiceClient();
   const email = `${TEST_PREFIX}${role.toLowerCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}@example.test`;
-  const password = 'Test-password-1234!';
+  // Generated per user rather than a hardcoded literal — unique, strong, and
+  // carried on the returned TestUser so getClientAs() signs in with the same value.
+  const password = `Test-${randomUUID()}!A1`;
 
   const { data: authUser, error: authError } = await svc.auth.admin.createUser({
     email,

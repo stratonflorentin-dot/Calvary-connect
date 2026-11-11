@@ -25,6 +25,30 @@ const ALLOWED_BUCKETS = new Set([
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
+// Content types / extensions a browser renders as active content inline. If one
+// of these is stored in a public bucket and opened by its URL, it executes in
+// the app's origin — a stored-XSS vector. Blocked at upload. A denylist (rather
+// than an allowlist) is used so every legitimate image/PDF/office upload keeps
+// working unchanged; only the executable formats are rejected.
+const BLOCKED_CONTENT_TYPES = new Set([
+  "text/html",
+  "application/xhtml+xml",
+  "image/svg+xml",
+  "text/xml",
+  "application/xml",
+  "application/javascript",
+  "text/javascript",
+]);
+const BLOCKED_EXTENSIONS = new Set([
+  "html", "htm", "xhtml", "svg", "xml", "js", "mjs", "htaccess",
+]);
+
+function hasBlockedExtension(path: string) {
+  const name = path.split("/").pop() || "";
+  const ext = name.includes(".") ? name.split(".").pop()!.toLowerCase() : "";
+  return BLOCKED_EXTENSIONS.has(ext);
+}
+
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -67,9 +91,14 @@ export async function uploadToBucketAction(
       return { error: `File is too large (max ${Math.round(MAX_BYTES / 1024 / 1024)} MB)` };
     }
 
+    const declaredType = (file.type || "application/octet-stream").toLowerCase().split(";")[0].trim();
+    if (BLOCKED_CONTENT_TYPES.has(declaredType) || hasBlockedExtension(path)) {
+      return { error: "This file type is not allowed" };
+    }
+
     const { error: uploadError } = await admin.storage.from(bucket).upload(path, file, {
       upsert: true,
-      contentType: file.type || "application/octet-stream",
+      contentType: declaredType,
     });
     if (uploadError) return { error: uploadError.message };
 
