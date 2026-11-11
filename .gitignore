@@ -56,3 +56,8 @@ firestore-debug.log
 # Stitch design-export mockups (reference material, not app code)
 stitch_sales_pipelines_board/
 node_modules
+
+# Scratch build logs and temp probing output (not app code)
+build-*.log
+build-*.err.log
+temp-api-*/
