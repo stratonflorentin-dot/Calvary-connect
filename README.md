@@ -8,6 +8,12 @@ The platform connects fleet operations, trip management, drivers, finance, maint
 
 It is being developed for **Calvary Investment Company Ltd**, a Tanzania-based logistics and transport company.
 
+## Data protection & compliance
+
+This platform processes personal data under Tanzania's **Personal Data Protection Act, 2022**.
+Data-controller registration with the **Personal Data Protection Commission (PDPC)** and the
+registration record are tracked in [`docs/compliance/pdpc-registration.md`](docs/compliance/pdpc-registration.md).
+
 ## Overview
 
 Managing a logistics company often requires information from several departments.

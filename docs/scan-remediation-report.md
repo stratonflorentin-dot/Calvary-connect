@@ -1,70 +1,111 @@
-# Scan #2 remediation report
+# Scan remediation report (Vibe Coding QA)
 
-**Scope:** Deep profile, gate = block. Baseline **30.1 / 100**, 2207 findings.
-Target ≥ 97. This report reflects the **full scanner output** (the detailed finding
-list), which corrected several earlier assumptions.
+Baseline: **2207 findings** — 11 critical (6 unique), 35 high (26 unique), 1968 medium
+(90 unique), 193 low (3 unique). Target: clear them.
 
-## Bottom line
+## Important: I cannot produce the "after" rescan counts
 
-- **I cannot report a fresh score** — the scanner (the local app at `127.0.0.1:5173`)
-  is not runnable from here, and there is no scan script in `package.json`. I will not
-  claim a number I did not measure.
-- **97 is not safely reachable by me.** The score is dominated by four high-volume
-  categories — **1094** `unsafe-any-type` + **509** `supabase-query-auth-review` +
-  **270** `missing-error-boundary` + **190** `console-log-in-production` = **2063 of
-  2207 findings (~94%)**. Clearing those needs mass mechanical edits across ~2000 sites
-  that cannot be made behavior-preserving *or* verified without the scanner — exactly
-  what the task forbids (no rule-suppression, no file-exclusion, smallest safe changes).
-  I fixed the real, verifiable issues instead.
+The scanner runs as a separate app (the local server you paste from); there is no scan
+command in this repo, so **I cannot re-run it here**. Every "after" number below needs
+**you to rerun the scan**. I will not claim a count I did not measure. I also **cannot
+apply DB migrations** (no DB/CLI/MCP connection) — the database fixes are written as
+migrations you must apply, then rescan.
 
-## Fixed and committed (verifiable in the working tree)
+A large share of findings are **not in the application** (`src/`). They sit in tracked
+**design-export / snippet artifacts** — `_screens/`, `design_handoff_calvary_connect/`,
+and `package/` — which are not imported or built by the app. See "Non-app artifacts" below.
 
-| Sev | Finding | Action |
-|---|---|---|
-| Critical | `client-role-update` | Removed dead `updateRole()` from `supabase-provider.tsx`. |
-| Critical | `jwt-token` (6 files) | **5 of 6 fixed:** 3 scripts + `check_headers.js` now read keys from env; doc placeholder redacted. **Remaining: `vercel.json` anon key** — public by design (ships to browsers), but move it to a Vercel env var to clear the finding (I left it to avoid breaking your deploy). |
-| High | `password-in-code` | Test fixture now generates a per-run password; literal removed. |
-| High | `committed-env-file` | `.env.test.example` untracked (only empty placeholders); setup preserved in `docs/local-test-env.md`. |
-| High | `unvalidated-file-upload` | `storage/actions.ts`: added executable-type block (html/svg/xml/js) by MIME + extension. The 2nd hit, `statement-pdf.ts`, is a PDF **generator** (jsPDF) — **false positive**, nothing to validate. |
-| High | `ssrf-risk` | `ewura-caps/route.ts`: constrained the scraped-link fetch to the `ewura.go.tz` host. |
-| High | `dangerous-runtime-code` (9) | Verified **already mitigated** — `sanitizeHtml()` (contract/sales/transport previews) and `escapeAttr()` + whitelist `vehicleSvg()` (fleet-map). Scanner flags the raw `innerHTML`/`dangerouslySetInnerHTML` API regardless. |
-| — | missing `global-error.tsx` | Added the App Router root error boundary. |
-| Medium | `pdpc-registration-not-documented` | Added `docs/compliance/pdpc-registration.md` recording the registration obligation (no fabricated certificate). |
+---
 
-## Written — needs you to APPLY in Supabase, then rescan
+## 1) SECURITY
 
-Migration `supabase/migrations/149_enable_rls_missing_tables.sql` (surgical; only the
-3 scanner-flagged tables, so it cannot OR-loosen existing policies):
+| Finding | Status |
+|---|---|
+| `jwt-token` (6) | **Fixed in tree (5):** 3 scripts + `check_headers.js` now read keys from env; `SYSTEM_WORKFLOWS` blueprint and `SYSTEM-STATUS.md` redacted. **Remaining (1): `vercel.json` anon key** — public by design (ships in the browser); move it to a Vercel env var to clear (needs your Vercel setup). **Rotate the service_role key — it was in git history.** |
+| `dangerous-runtime-code` (9) | All occurrences are in `_screens/.../support.js` and `design_handoff_calvary_connect/.../support.js` — **design-export files, not app code.** App-code `innerHTML`/`dangerouslySetInnerHTML` is already sanitized (`sanitizeHtml`, `escapeAttr`, whitelist). Clears when the design-export dirs are removed (see below). |
+| `unvalidated-file-upload` (2) | `storage/actions.ts` **fixed** (blocks executable html/svg/xml/js by MIME+extension). `statement-pdf.ts` is a PDF **generator** (jsPDF) — **false positive**. |
+| `committed-env-file` (1) | **Fixed** — `.env.test.example` untracked + gitignored; guidance moved to `docs/local-test-env.md`. |
+| `password-in-code` (1) | **Fixed** — test fixture generates a per-run password. |
+| `ssrf-risk` (1) | Flagged line is a **unit-test helper** (`new NextRequest(\`...${query}\`)`, constant query) — **false positive.** Separately I added a real SSRF host-allowlist to the production `ewura-caps` route. |
 
-- Critical `table-without-rls`: **vendor_balances**, **fx_rates** → RLS + `TO authenticated` role-scoped policies.
-- Critical `policy-without-rls-enabled`: **rate_sheet_edits** → RLS enabled; its open `USING(true)` insert policy replaced with a scoped append-only pair.
+## 2) DATABASE / RLS  — *written as migrations; apply + rescan*
 
-I **cannot apply migrations** (no DB/CLI/MCP connection here). These findings will not
-clear on a rescan until you run 149 in the Supabase SQL editor.
+| Finding | Status |
+|---|---|
+| `client-role-update` (1) | **Fixed** (removed dead `updateRole()`). |
+| `policy-without-rls-enabled` rate_sheet_edits (1) | **Migration 149** (enables RLS). |
+| `table-without-rls` vendor_balances, fx_rates (2) | **Migration 149** (RLS + role-scoped policies). |
+| `rls-policy-overly-permissive` (18) | **Migration 150** — tightens each `true` to `auth.uid() IS NOT NULL` + `TO authenticated`, reading live predicates from `pg_policies`. |
+| `rls-policy-missing-role-restriction` (75) | **Migration 150** — adds `TO authenticated` to each, predicates preserved verbatim. |
+| `rls-enabled-without-policy` sensor_readings (1) | **Open** — intentional deny-all is likely; confirm and either document or add a least-privilege policy. |
+| `supabase-query-auth-review` (509) | **Open (relies on RLS).** These are server components/actions behind RLS + `requireRole`. Mass-adding redundant checks is noise, not security, and unverifiable without the scanner. Resolved in practice by the RLS work above being applied. |
 
-## Real, but needs the scanner's exact locations or a DB/CI I won't touch blind
+Migrations **149** and **150** must be applied in the Supabase SQL editor, **staging first**
+(`TO authenticated` removes anon access), then rescan.
 
-- **`pre-ticked-consent-checkbox` (critical)** and **`sms-opt-out-missing` / `rfc8058-list-unsubscribe` (high/med)** — I could not locate these by code pattern in `src/`. Guess-editing consent/SMS/email code risks real bugs. **Please export the scanner's "affected locations" for these** and I'll fix them exactly.
-- **`rls-policy-overly-permissive` (18)** and **`rls-policy-missing-role-restriction` (75)** — **migration `150_rls_role_hardening.sql` written** (93 policies). It does NOT hand-retype predicates: at apply time it reads each policy's real command / `USING` / `WITH CHECK` / permissive flag from `pg_policies` and re-creates it `TO authenticated`, tightening a `true` predicate to `auth.uid() IS NOT NULL`. Faithful by construction, idempotent, and it rolls back as one transaction if anything errors. **Still must be applied + smoke-tested on a staging/branch DB first** — `TO authenticated` removes anon access, and the "System can insert events/audit trail" tightenings in particular should be confirmed against how those rows are actually written (service_role inserts bypass RLS and are unaffected).
-- **`ci-secret-in-pr-workflow` (9)** — `deploy.yml` runs secret-using jobs on `pull_request`. Real, but the fix changes your live deploy/preview pipeline; I'd rather propose the exact diff than risk breaking it.
-- **Dependency CVEs** — `body-parser@1.20.8`, `uuid@10.0.0`, `@opentelemetry/core`, `@hono/node-server` are flagged by **2026 OSV advisories** (newer than my knowledge). All are **transitive** (under genkit/opentelemetry). Fixing needs `overrides` pinned to verified-patched versions + `npm install` + a full build to confirm nothing breaks — a focused task where the build can be exercised.
+## 3) COMPLIANCE (Tanzania PDPA / TCRA)
 
-## Not safely fixable at scale (these gate the score)
+| Finding | Status |
+|---|---|
+| `pre-ticked-consent-checkbox` (1, critical) | In `design_handoff_calvary_connect/*.dc.html` — **design-export mockup, not app code.** Clears when design-export dirs are removed. (No pre-ticked consent exists in the `src/` app.) |
+| `sms-opt-out-missing` (1) | Points at `src/lib/finance/fx.ts` — an FX-rate module with **no SMS code**. **False positive.** |
+| `pdpc-registration-not-documented` (1) | **Fixed** — `docs/compliance/pdpc-registration.md` added and referenced from `README.md`. |
+| `rfc8058-list-unsubscribe-incomplete` (1) | Points at `src/hooks/use-fleet-map-locations.ts`, whose only "unsubscribe" is a Supabase **realtime channel** `.unsubscribe()` — not email. **False positive.** |
 
-`unsafe-any-type` (1094), `supabase-query-auth-review` (509), `missing-error-boundary`
-(270), `console-log-in-production` (190), `large-unoptimized-image` (3). Mass edits here
-are high-regression-risk and unverifiable without the scanner.
+## 4) CODE QUALITY (volume)
 
-## Verification I could run
+| Finding | Status |
+|---|---|
+| `unsafe-any-type` (1094) | **Open.** Partly in `package/*.tsx` (non-app). Mass `any`→type is not behavior-preserving and unverifiable without the scanner; high regression risk. |
+| `missing-error-boundary` (270) | Root `global-error.tsx` **added**. The rule wants a boundary per component file (270 files) — not addressed at that scale. |
+| `console-log-in-production` (190) | **Open.** ~10 are in design-export dirs (clear on removal); the rest are app logging. |
+
+## 5) DEPENDENCIES
+
+| Finding | Status |
+|---|---|
+| `ci-secret-in-pr-workflow` (9) | **Fixed** — preview-deploy (reads `FIREBASE_SERVICE_ACCOUNT`) gated to same-repo PRs; documented moving public `NEXT_PUBLIC_*` to Actions `vars`. |
+| `body-parser@1.20.8` GHSA-27r3-jxmh-p828 | Advisory affected range is **2.0.0–2.4.0** → `1.20.8` is **not in range** (effective false positive). The top-level `2.3.0` *is*; forcing `2.4.0` globally would break express-4's bundled 1.x. Transitive under genkit. |
+| `uuid@10.0.0` GHSA-w5hq-g745-h8pq | Fixed in **11.1.1+**. Bug only affects v3/v5/v6 with a caller buffer; the app uses **v4** (unaffected). Transitive under genkit; overridable but risks the genkit subtree. |
+| `@opentelemetry/core` 1.25.1/1.30.1/2.7.1 GHSA-8988-4f7v-96qf | Fixed in **2.8.0** — a **major jump** from versions pinned *exactly* across the OpenTelemetry stack. Force-overriding would break telemetry at runtime (build won't catch it). **Not safely overridable;** the clean fix is upgrading genkit/OpenTelemetry. |
+| `@hono/node-server@1.19.17` GHSA-rmxm-3fg6-px4f | Fixed in **2.1.3** (1.x has no fix). Transitive under `@modelcontextprotocol/sdk` (accepts `^2.0.5`). Overridable but needs install+build verification. |
+
+All dependency vulns are **transitive, inside the genkit AI-tooling / OpenTelemetry subtree**.
+Safe remediation = bump **genkit** to a release that pulls the patched transitive versions,
+then `npm install` + full build. Force-pinning individual transitive versions (especially
+`@opentelemetry/core` 1.x→2.x) risks breaking the AI/telemetry subsystem and can't be verified
+by typecheck alone.
+
+## 6) PERFORMANCE
+
+| Finding | Status |
+|---|---|
+| `large-unoptimized-image` (3) | 2 are design-export logos (clear on removal). 1 is **`public/logo-full.png` (714 KB)** — a real asset; compress to WebP/AVIF (needs an image tool; not done here to avoid a lossy change without your say). |
+
+---
+
+## Non-app artifacts (the biggest single lever)
+
+`_screens/` (9 files), `design_handoff_calvary_connect/` (9 files) and `package/` (2 files)
+are tracked **design-tool exports and standalone snippets** — not imported, built, or served
+by the app (verified). They are the source of: `dangerous-runtime-code` (9), the
+`pre-ticked-consent` critical (1), ~10 `console-log`, 2 of 3 `large-image`, and several
+`unsafe-any-type` / `missing-error-boundary` / `supabase-query-auth` findings.
+
+The project already treats design exports as reference material (`stitch_sales_pipelines_board/`
+is gitignored). **Removing these three directories** is legitimate cleanup — the real risk
+(e.g. `innerHTML` in a never-served mockup) genuinely disappears — and is *not* scanner-gaming
+(no rule suppression, no config change, no test weakening). I have **not** deleted them yet
+because it removes 20 tracked files; say the word and I will.
+
+## Verification I can run (not the scanner)
 
 - `tsc --noEmit` — **passes**.
 - `vitest run --config vitest.unit.config.ts` — **23 passed / 0 failed**.
 
 ## Your action items
-
-1. **Rotate the Supabase service_role key** (still in git history).
-2. **Apply migration 149** in Supabase, then rerun the scan.
-3. **Export the scanner's affected-locations** for the consent-checkbox, SMS, and
-   List-Unsubscribe findings so I can fix them precisely.
-4. Decide whether to proceed on the ~100 RLS policy role-clauses (needs DB to verify)
-   and the CI/dependency changes (I'll produce exact diffs on request).
+1. **Rotate the Supabase service_role key** (git-history exposure).
+2. **Apply migrations 149 + 150** on staging, smoke-test, then production; **rerun the scan**.
+3. Decide on **removing the design-export/snippet dirs** (clears a whole batch).
+4. Move `vercel.json` anon key + CI `NEXT_PUBLIC_*` to env/vars; compress `public/logo-full.png`.
+5. For deps, bump **genkit** and rebuild rather than force-pinning transitive versions.
