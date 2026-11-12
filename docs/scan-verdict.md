@@ -40,7 +40,32 @@ un-floor quality (clear ~all 1084 `any`) and to approach 97 you must also un-flo
 query-auth clearance can't be done without gaming. **So 97 is not safely achievable; I will
 not claim it.**
 
-## What I can legitimately do (measured, ceiling ≈71)
+## Measured result after the achievable fixes (verified by re-scan)
+
+**41.62 → 49.76.** `dependencies` 46→100 (split secret jobs out of PR-triggered
+workflow: `ci-secret` 9→0) and `performance` 97.6→100 (logo png 730KB→117KB). The three
+floored modules did not move — confirming that partial fixes to a floored module are
+score-invisible.
+
+**Corrected honest ceiling ≈ 50, not 71.** My earlier ~71 assumed `security` was cleanly
+clearable. It is not: of its 9 findings, only the 5 fleet-map `innerHTML` are legitimately
+fixable (a real DOM refactor); the other 4 are the *public* vercel anon key, two upload
+false positives (one is a PDF **generator**), and the SSRF **unit test**. Clearing those by
+dodging the scanner's per-line heuristic is gaming, so `security` stays floored. Likewise
+`quality` (walled by 1084 `any`) and `database` (walled by 503 `query-auth`). Every floored
+module has a wall that can't be cleared without either the big volume refactor or gaming.
+
+## Real-but-score-invisible improvements still available
+
+- **RLS SQL hardening (96 findings)** — editing the flagged files' `USING(true)` / missing-`TO`
+  lines genuinely restricts the policies and removes 18 HIGH + 78 MEDIUM findings, but
+  `database` stays floored by `query-auth`, so the score does not move.
+- **fleet-map `innerHTML` → DOM** — real XSS hardening (5 findings), but `security` stays
+  floored by the false positives above.
+
+I can do these for real security value on request; they will not raise the number.
+
+## What the achievable fixes were (now done)
 
 Real improvements that actually move the floored/partial modules, each verified by re-scan:
 
