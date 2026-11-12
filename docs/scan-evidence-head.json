@@ -1,0 +1,102 @@
+{
+  "overall_score": 41.62,
+  "critical": 2,
+  "high": 27,
+  "gate": "BLOCKED",
+  "modules": {
+    "security": {
+      "score": 0.0,
+      "status": "block"
+    },
+    "quality": {
+      "score": 0.0,
+      "status": "pass"
+    },
+    "database": {
+      "score": 0.0,
+      "status": "block"
+    },
+    "infrastructure": {
+      "score": 100.0,
+      "status": "pass"
+    },
+    "performance": {
+      "score": 97.6,
+      "status": "pass"
+    },
+    "compliance": {
+      "score": 80.0,
+      "status": "fail"
+    },
+    "dependencies": {
+      "score": 46.0,
+      "status": "pass"
+    }
+  },
+  "top_rules": [
+    [
+      "quality:unsafe-any-type",
+      1084
+    ],
+    [
+      "database:supabase-query-auth-review",
+      503
+    ],
+    [
+      "quality:console-log-in-production",
+      184
+    ],
+    [
+      "database:rls-policy-missing-role-restriction",
+      78
+    ],
+    [
+      "database:rls-policy-overly-permissive",
+      18
+    ],
+    [
+      "dependencies:ci-secret-in-pr-workflow",
+      9
+    ],
+    [
+      "security:dangerous-runtime-code",
+      5
+    ],
+    [
+      "security:unvalidated-file-upload",
+      2
+    ],
+    [
+      "security:ssrf-risk",
+      1
+    ],
+    [
+      "security:jwt-token",
+      1
+    ],
+    [
+      "database:rls-enabled-without-policy",
+      1
+    ],
+    [
+      "database:table-without-rls",
+      1
+    ],
+    [
+      "performance:large-unoptimized-image",
+      1
+    ],
+    [
+      "compliance:explicit-opt-in-unverified",
+      1
+    ],
+    [
+      "compliance:rfc8058-list-unsubscribe-incomplete",
+      1
+    ],
+    [
+      "compliance:sms-opt-out-missing",
+      1
+    ]
+  ]
+}
