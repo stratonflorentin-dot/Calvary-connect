@@ -71,10 +71,18 @@ Migrations **149** and **150** must be applied in the Supabase SQL editor, **sta
 | `@hono/node-server@1.19.17` GHSA-rmxm-3fg6-px4f | Fixed in **2.1.3** (1.x has no fix). Transitive under `@modelcontextprotocol/sdk` (accepts `^2.0.5`). Overridable but needs install+build verification. |
 
 All dependency vulns are **transitive, inside the genkit AI-tooling / OpenTelemetry subtree**.
-Safe remediation = bump **genkit** to a release that pulls the patched transitive versions,
-then `npm install` + full build. Force-pinning individual transitive versions (especially
-`@opentelemetry/core` 1.x→2.x) risks breaking the AI/telemetry subsystem and can't be verified
-by typecheck alone.
+
+**Action taken:** bumped **genkit 1.28 → 1.44** (`genkit-cli` 1.45, `genkitx-groq` 0.31),
+`npm install`, verified with `tsc`, 23/23 unit tests, and a full `next build`. Result:
+- ✅ `body-parser` → **2.4.0** — GHSA-27r3-jxmh-p828 cleared.
+- ✅ `@hono/node-server` → **2.1.7** — GHSA-rmxm-3fg6-px4f cleared.
+- ❌ `uuid` still **10.0.0** — genkit 1.44 still pins v10; other copies are v8/v9
+  (exceljs, jaeger-client). Not force-overridden: it would jump several transitive
+  libs across multiple majors (untestable at runtime here) to fix a bug that only
+  affects v3/v5/v6 with a caller buffer, while the app uses **v4 (unaffected)**.
+- ❌ `@opentelemetry/core` still **1.25.1/1.30.1/2.7.1** — fix 2.8.0 is a 1.x→2.x
+  major jump pinned exactly across the OTel stack; force-overriding breaks telemetry
+  at runtime. Clears when genkit/OTel upstream moves to OTel 2.8+.
 
 ## 6) PERFORMANCE
 
