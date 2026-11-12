@@ -188,5 +188,8 @@ function buildStatementPdf(d: StatementPdfData): jsPDF {
 
 export function downloadStatementPdf(d: StatementPdfData, filename: string) {
   const doc = buildStatementPdf(d);
-  doc.save(filename);
+  // Sanitize the download filename — strip path separators and control chars so
+  // the saved name can't traverse directories or carry unexpected characters.
+  const safeName = filename.replace(/[/\\:*?"<>|\x00-\x1f]/g, "_");
+  doc.save(safeName);
 }

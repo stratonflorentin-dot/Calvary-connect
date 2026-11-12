@@ -96,7 +96,7 @@ export async function uploadToBucketAction(
       return { error: "This file type is not allowed" };
     }
 
-    const { error: uploadError } = await admin.storage.from(bucket).upload(path, file, {
+    const { error: uploadError } = await admin.storage.from(bucket).upload(path, file, { // type/extension/size validated above
       upsert: true,
       contentType: declaredType,
     });

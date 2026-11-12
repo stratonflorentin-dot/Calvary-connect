@@ -23,8 +23,8 @@ const kenya = [
   { fuel: "Gasoline prices", date: "05.10.2026", kes: "212.61", usd: "1.637" },
 ];
 
-function request(query: string) {
-  return new NextRequest(`http://localhost/api/external/fuel/prices${query}`);
+function request(qs: string) {
+  return new NextRequest(`http://localhost/api/external/fuel/prices${qs}`);
 }
 
 describe("external fuel prices route", () => {

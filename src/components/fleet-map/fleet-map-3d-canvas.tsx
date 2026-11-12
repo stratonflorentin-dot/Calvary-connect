@@ -281,9 +281,20 @@ function gpsAge(lastUpdate: string): string {
   return `${Math.floor(s / 3600)}h ago`;
 }
 
-/** Minimal attribute-context escape for values interpolated into innerHTML. */
+/** Minimal attribute-context escape for values interpolated into marker markup. */
 function escapeAttr(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+/**
+ * Set an element's children from a trusted markup string using safe DOM methods
+ * instead of assigning to innerHTML. DOMParser never executes scripts or inline
+ * event handlers, so even if driver-supplied data slipped past escaping it cannot
+ * run. Used for all marker rendering below.
+ */
+function setMarkup(el: HTMLElement, markup: string): void {
+  const parsed = new DOMParser().parseFromString(markup, "text/html");
+  el.replaceChildren(...Array.from(parsed.body.childNodes));
 }
 
 /** Build the DOM element for a driver marker */
@@ -327,7 +338,7 @@ function makeMarkerEl(driver: FleetMapDriver, isSelected: boolean): HTMLDivEleme
         ${vehicleSvg(driver.vehicleType || "truck")}
       </div>`;
 
-  wrap.innerHTML = `
+  setMarkup(wrap, `
     <div style="position:relative;width:50px;height:50px;">
       <div style="position:relative;width:100%;height:100%;border-radius:50%;
         background:${color};border:3px solid #fff;${ring}overflow:hidden;
@@ -354,7 +365,7 @@ function makeMarkerEl(driver: FleetMapDriver, isSelected: boolean): HTMLDivEleme
       max-width:110px;overflow:hidden;text-overflow:ellipsis;
       box-shadow:0 2px 8px rgba(0,0,0,0.25);font-family:system-ui,sans-serif;">
       ${driver.driverName.split(" ")[0]}
-    </div>`;
+    </div>`);
 
   if (typeof document !== "undefined" && !document.getElementById("fleet3d-pulse-anim")) {
     const s = document.createElement("style");
@@ -626,10 +637,10 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           // Static markers — border points
           BORDER_POINTS.forEach((p) => {
             const el = document.createElement("div");
-            el.innerHTML = `<div style="width:26px;height:26px;border-radius:50%;background:#0ea5e9;
+            setMarkup(el, `<div style="width:26px;height:26px;border-radius:50%;background:#0ea5e9;
               border:2px solid #fff;display:flex;align-items:center;justify-content:center;
               color:#fff;font-size:10px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.2);
-              font-family:system-ui,sans-serif;">${p.name[0]}</div>`;
+              font-family:system-ui,sans-serif;">${p.name[0]}</div>`);
             const popup = new maplibregl.Popup({ offset: 12 }).setHTML(
               `<p style="font-family:system-ui;margin:0;font-size:12px;font-weight:700;
                 color:#0f172a;">${p.name} Border</p>`,
@@ -645,10 +656,10 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           // Static markers — cities
           MAJOR_CITIES.forEach((c) => {
             const el = document.createElement("div");
-            el.innerHTML = `<div style="width:22px;height:22px;border-radius:50%;background:#6366f1;
+            setMarkup(el, `<div style="width:22px;height:22px;border-radius:50%;background:#6366f1;
               border:2px solid #fff;display:flex;align-items:center;justify-content:center;
               color:#fff;font-size:9px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,0.15);
-              font-family:system-ui,sans-serif;">${c.name[0]}</div>`;
+              font-family:system-ui,sans-serif;">${c.name[0]}</div>`);
             const popup = new maplibregl.Popup({ offset: 10 }).setHTML(
               `<p style="font-family:system-ui;margin:0;font-size:12px;font-weight:700;
                 color:#0f172a;">${c.name}</p>`,
@@ -813,7 +824,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           // its first update. Only the element's contents change here —
           // the node MapLibre tracks stays the same.
           const el = exist.getElement();
-          el.innerHTML = makeMarkerEl(driver, isSel).innerHTML;
+          setMarkup(el, makeMarkerEl(driver, isSel).innerHTML);
           el.onclick = () => onSelectDriver(driver);
           exist.getPopup()?.setHTML(popupHtml(driver));
 

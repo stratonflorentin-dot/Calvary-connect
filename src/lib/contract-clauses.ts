@@ -416,7 +416,11 @@ export async function generatePDF(html: string, filename: string) {
         const win = window as any;
         if (win.html2pdf) {
             const element = document.createElement('div');
-            element.innerHTML = html;
+            // Safe DOM construction instead of innerHTML assignment: DOMParser
+            // never executes scripts or inline handlers, so contract markup is
+            // rendered inertly before html2pdf snapshots it.
+            const parsedDoc = new DOMParser().parseFromString(html, 'text/html');
+            element.replaceChildren(...Array.from(parsedDoc.body.childNodes));
 
             const options = {
                 margin: 0,
