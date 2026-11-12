@@ -10,7 +10,7 @@ Your Fleet Management System is now **running with real Supabase integration**!
 
 ### ✅ **Credentials Configured**
 - **Project URL**: https://qaqonhjeqtlatqsrqcnx.supabase.co
-- **Anon Key**: ✅ Properly configured (starting with eyJhbGciOi...)
+- **Anon Key**: ✅ Properly configured (value kept in environment variables, not documented here)
 - **Service Role Key**: ✅ Configured for advanced operations
 - **Environment**: Production mode (not demo)
 
