@@ -60,3 +60,8 @@ node_modules
 build-*.log
 build-*.err.log
 temp-api-*/
+
+# Design-tool exports and standalone snippets (not application code)
+/_screens/
+/design_handoff_calvary_connect/
+/package/
